@@ -18,6 +18,7 @@
 """
 import argparse
 import hashlib
+import random
 import hmac
 import json
 import os
@@ -41,6 +42,11 @@ CONFIG = {
     "max_symbol_pct": 0.35,   # 单标的占用本金上限
     "max_slip": 0.008,        # 单笔入场滑点上限 0.8%，超过放弃
     "poll_sec": 10,           # 轮询间隔（VPS 常驻用）
+    # --- 去同步化：不做 1:1 复刻，降低可识别性与相关性 ---
+    "jitter_sec": 18,         # 下单前随机延迟 0~18 秒
+    "weight_jitter": 0.05,    # 仓位随机浮动 ±5%
+    "skip_prob": 0.03,        # 3% 概率跳过该笔（模拟人工判断）
+    "min_order_usd": 12.0,    # 低于此金额的碎单不下
 }
 
 # 源配置：weight = 分配的资金权重（总和建议 1.0）
@@ -303,18 +309,28 @@ def one_round(cfg, sources, st, router, verbose=True):
 
     for o in closes[:cfg["max_positions"]]:
         router.market(o["symbol"], o["delta"], reduce_only=True)
+
+    skipped = 0
     for o in opens:
         if len(held) >= cfg["max_positions"] and o["symbol"] not in held:
             continue
-        router.market(o["symbol"], o["delta"])
-        held[o["symbol"]] = held.get(o["symbol"], 0) + o["delta"]
+        if abs(o["delta"]) < cfg["min_order_usd"]:
+            continue
+        if random.random() < cfg["skip_prob"]:
+            skipped += 1
+            journal({"action": "SKIP_JITTER", "symbol": o["symbol"], "delta": round(o["delta"], 2)})
+            continue
+        delta = o["delta"] * (1 + random.uniform(-cfg["weight_jitter"], cfg["weight_jitter"]))
+        time.sleep(random.uniform(0, cfg["jitter_sec"]))
+        router.market(o["symbol"], delta)
+        held[o["symbol"]] = held.get(o["symbol"], 0) + delta
 
     st["held"] = held
     st["last_run"] = now().isoformat(timespec="seconds")
     st["signals"] = signals
     save_state(st)
     journal({"action": "ROUND", "equity": round(equity, 2), "signals": len(signals),
-             "opens": len(opens), "closes": len(closes), "desired": {k: round(v, 2) for k, v in desired.items()}})
+             "opens": len(opens), "closes": len(closes), "skipped": skipped, "desired": {k: round(v, 2) for k, v in desired.items()}})
     return st
 
 
