@@ -1,0 +1,46 @@
+name: copy-engine-dry
+# 复制带单引擎（dry-run：只记账不下单）。验证信号折算与风控逻辑，为 12 月真钱上线做样本。
+on:
+  schedule:
+    - cron: "*/30 * * * *"     # 每 30 分钟跑一轮（Actions 是纸面账户，不需要更密）
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: "重置纸面账户"
+        required: false
+        default: "0"
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: selftest
+        run: python3 scripts/copy_engine.py --selftest
+      - name: reset if asked
+        if: github.event.inputs.reset == '1'
+        run: echo '{"halted": false, "seen": {}, "positions": [], "realized": 0.0, "source_pnl": {}, "disabled_sources": [], "held": {}}' > state/engine_state.json
+      - name: one round
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          mkdir -p data state
+          python3 scripts/copy_engine.py --mode dry --once
+      - name: commit state
+        run: |
+          git config user.name "tds-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add state/ data/ 2>/dev/null || exit 0
+          git diff --staged --quiet && echo "no change" && exit 0
+          git commit -m "engine: dry round [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase --autostash -q origin main && git push -q && break
+            echo "retry $i"; sleep 5
+          done
