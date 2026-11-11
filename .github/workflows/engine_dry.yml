@@ -26,7 +26,9 @@ jobs:
         run: python3 scripts/copy_engine.py --selftest
       - name: reset if asked
         if: github.event.inputs.reset == '1'
-        run: echo '{"halted": false, "seen": {}, "positions": [], "realized": 0.0, "source_pnl": {}, "disabled_sources": [], "held": {}}' > state/engine_state.json
+        run: |
+          mkdir -p state
+          printf '%s' '{"halted": false, "seen": {}, "positions": [], "realized": 0.0, "source_pnl": {}, "disabled_sources": [], "held": {}}' > state/engine_state.json
       - name: one round
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
