@@ -1,0 +1,53 @@
+name: shadow-copy
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # 每5分钟轮询暴力源新仓
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "任意值即可，仅手动触发用"
+        required: false
+
+permissions:
+  contents: write
+concurrency:
+  group: shadow-copy
+  cancel-in-progress: false
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: sync
+        run: |
+          git config user.name "tds-bot"
+          git config user.email "bot@users.noreply.github.com"
+          for i in 1 2 3; do
+            git pull --rebase --autostash -q origin main && break
+            echo "pull retry $i"; sleep 5
+          done
+
+      - name: run
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python3 scripts/shadow_copy.py
+
+      - name: commit
+        run: |
+          git add data/shadow_copy.jsonl state/shadow_state.json 2>/dev/null || true
+          git diff --staged --quiet && echo "no change" && exit 0
+          git commit -m "shadow: $(date -u +%FT%TZ) [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase --autostash -q origin main && git push -q && break
+            echo "push retry $i"; sleep 5
+          done

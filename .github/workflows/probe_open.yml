@@ -1,0 +1,16 @@
+name: probe-open
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        required: true
+        default: "5236187913165742336,5170016259600335617,4902752005274121217,5008273081378616064,4532994172262753536"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/probe_open.py "${{ github.event.inputs.ids }}"

@@ -1,0 +1,18 @@
+name: probe4
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: vision futures dumps
+        run: |
+          B="https://data.binance.vision/data/futures/um"
+          for s in BTCUSDT ETHUSDT AKEUSDT AAPLUSDT SNDKUSDT SKHYNIXUSDT; do
+            for kind in monthly daily; do
+              if [ "$kind" = "monthly" ]; then U="$B/monthly/klines/$s/1h/$s-1h-2026-08.zip"; else U="$B/daily/klines/$s/1h/$s-1h-2026-08-15.zip"; fi
+              C=$(curl -s -o /dev/null -w "%{http_code}" -m 12 "$U")
+              L=$(curl -sI -m 12 "$U" | grep -i content-length | tr -d '\r' | awk '{print $2}')
+              echo "$s $kind $C ${L:-0}"
+            done
+          done

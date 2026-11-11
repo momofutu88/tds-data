@@ -1,0 +1,16 @@
+name: probe-follower
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        required: true
+        default: "5159399805711344897,5133452281665177088,5159832051487379968"
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/probe_follower.py --ids "${{ github.event.inputs.ids }}"

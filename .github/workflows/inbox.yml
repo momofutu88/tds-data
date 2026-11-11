@@ -1,0 +1,26 @@
+name: inbox
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: inbox
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: pull inbox from ntfy and archive
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_TOKEN }}
+        run: python3 scripts/inbox.py

@@ -1,0 +1,37 @@
+name: klines
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  klines:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: fetch klines + h3 features
+        run: python3 scripts/klines.py
+
+      - name: summary
+        run: |
+          echo "## H3 特征" >> $GITHUB_STEP_SUMMARY
+          echo "features rows: $(($(wc -l < data/h3_features.csv) - 1))" >> $GITHUB_STEP_SUMMARY
+          echo "kline size: $(du -h data/klines_1h_all.csv.gz | cut -f1)" >> $GITHUB_STEP_SUMMARY
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: klines
+          path: |
+            data/h3_features.csv
+            data/klines_1h_all.csv.gz
+          retention-days: 90
+
+      - name: publish to public repo
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_TOKEN }}
+        run: python3 scripts/publish.py

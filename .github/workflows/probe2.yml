@@ -1,0 +1,19 @@
+name: probe2
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe kline endpoints
+        run: |
+          echo "== fapi.binance.com"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 15 "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2"
+          echo "== data-api.binance.vision spot"
+          curl -s -m 15 "https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=2" | head -c 200; echo
+          echo "== bapi futures kline"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 15 "https://www.binance.com/bapi/futures/v1/public/future/common/get-klines?symbol=BTCUSDT&interval=1h&limit=2"
+          echo "== fapi1"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 15 "https://fapi1.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2"
+          echo "== fapi body"
+          curl -s -m 15 "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2" | head -c 200; echo

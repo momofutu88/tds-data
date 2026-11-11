@@ -1,0 +1,36 @@
+name: fetch-lead
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "portfolioId，逗号分隔"
+        required: true
+        default: "5140488422016171264,5152209743214391553"
+      cap:
+        description: "每人最多抓取仓位数"
+        default: "6000"
+      delay:
+        description: "每页间隔秒"
+        default: "1.6"
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: run
+        run: |
+          python3 scripts/fetch_lead.py --ids "${{ github.event.inputs.ids }}" \
+            --cap "${{ github.event.inputs.cap }}" --delay "${{ github.event.inputs.delay }}" --out data
+      - name: commit
+        run: |
+          git config user.name "tds-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "fetch-lead: ${{ github.event.inputs.ids }}"
+          for i in 1 2 3 4 5; do
+            git pull --rebase --autostash origin main || true
+            git push && break || sleep 20
+          done

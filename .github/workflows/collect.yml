@@ -1,0 +1,55 @@
+name: collect
+
+on:
+  workflow_dispatch:
+    inputs:
+      portfolio_ids:
+        description: "带单员 portfolioId，多个用逗号分隔"
+        default: "4902752005274121217,5170016259600335617,5263968339740503553,5236187913165742336,4532994172262753536"
+        required: true
+  schedule:
+    - cron: "0 1 * * *"     # 每天 UTC 01:00 = 北京时间 09:00
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: run collector
+        run: |
+          python3 scripts/collect.py \
+            --portfolio-ids "${{ github.event.inputs.portfolio_ids || '4902752005274121217,5170016259600335617,5263968339740503553,5236187913165742336,4532994172262753536,5008273081378616064,5010080316338276609,4186437056735338496,4471406909032852992' }}" \
+            --out data
+
+      - name: summary
+        run: |
+          echo "## 采集结果" >> $GITHUB_STEP_SUMMARY
+          for f in data/positions_*.csv data/trades_*.csv; do
+            [ -f "$f" ] && echo "- $f : $(($(wc -l < "$f") - 1)) 行" >> $GITHUB_STEP_SUMMARY
+          done
+          head -3 data/positions_*.csv >> $GITHUB_STEP_SUMMARY || true
+
+      - name: publish to public repo
+        env:
+          PUB_TOKEN: ${{ secrets.PUB_TOKEN }}
+        run: python3 scripts/publish.py
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data
+          path: data/
+          retention-days: 90
+
+      - name: commit back
+        run: |
+          git config user.name "tds-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "data: $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

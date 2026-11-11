@@ -1,0 +1,19 @@
+name: harvest-180
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install requests
+      - name: harvest 180d leads
+        run: python3 scripts/harvest180.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: h180-data
+          path: |
+            data/h180_*

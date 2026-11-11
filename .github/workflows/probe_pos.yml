@@ -1,0 +1,25 @@
+name: probe-pos
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: probe realtime position endpoints
+        run: |
+          B="https://www.binance.com/bapi/futures/v1/friendly/future/copy-trade/lead-portfolio"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
+          for p in position position-detail positions open-position position-list; do
+            echo "===== $p"
+            curl -s -m 15 -X POST "$B/$p" -H "Content-Type: application/json" -H "User-Agent: $UA" -H "Accept: application/json" -d '{"portfolioId":"4902752005274121217"}' | head -c 500
+            echo
+          done
+          echo "===== GET position"
+          curl -s -m 15 "$B/position?portfolioId=4902752005274121217" -H "User-Agent: $UA" | head -c 500
+          echo
+          echo "===== fapi ping"
+          curl -s -o /dev/null -w "%{http_code}\n" -m 10 https://fapi.binance.com/fapi/v1/ping
+          echo "===== history sanity"
+          curl -s -m 15 -X POST "$B/position-history" -H "Content-Type: application/json" -H "User-Agent: $UA" -d '{"portfolioId":"4902752005274121217","pageNumber":1,"pageSize":1}' | head -c 400

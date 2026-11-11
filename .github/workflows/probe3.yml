@@ -1,0 +1,22 @@
+name: probe3
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: diag
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
+          echo "== egress ip/country"
+          curl -s -m 10 https://ipinfo.io/json | head -c 200; echo
+          echo "== fapi status"
+          curl -s -m 15 -A "$UA" -w "\nSTATUS:%{http_code}\n" "https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1h&limit=2" | head -c 300
+          echo "== bapi friendly kline"
+          curl -s -m 15 -A "$UA" -w "\nSTATUS:%{http_code}\n" "https://www.binance.com/bapi/futures/v1/friendly/future/common/get-klines?symbol=BTCUSDT&interval=1h&limit=5" | head -c 400
+          echo "== bapi public kline"
+          curl -s -m 15 -A "$UA" -w "\nSTATUS:%{http_code}\n" "https://www.binance.com/bapi/futures/v1/public/future/common/get-klines?symbol=BTCUSDT&interval=1h&limit=5" | head -c 400
+          echo "== spot coverage AKE"
+          curl -s -m 15 -A "$UA" -w "\nSTATUS:%{http_code}\n" "https://data-api.binance.vision/api/v3/klines?symbol=AKEUSDT&interval=1h&limit=2" | head -c 200
+          echo "== spot coverage AAPL"
+          curl -s -m 15 -A "$UA" -w "\nSTATUS:%{http_code}\n" "https://data-api.binance.vision/api/v3/klines?symbol=AAPLUSDT&interval=1h&limit=2" | head -c 200
