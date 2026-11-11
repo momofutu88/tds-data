@@ -29,6 +29,9 @@ jobs:
         run: |
           mkdir -p state
           printf '%s' '{"halted": false, "seen": {}, "positions": [], "realized": 0.0, "source_pnl": {}, "disabled_sources": [], "held": {}}' > state/engine_state.json
+      - name: probe (源仓位诊断)
+        if: github.event.inputs.reset == '2'
+        run: python3 scripts/copy_engine.py --probe
       - name: one round
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

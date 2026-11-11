@@ -357,16 +357,36 @@ def selftest():
     return 0 if ok else 1
 
 
+def probe(sources):
+    """探查：源权益 + 当前未平仓位（诊断用，不下单）。"""
+    for src in sources:
+        try:
+            eq, nick = source_equity(src["pid"])
+            pos = source_open_positions(src["pid"])
+            print(f"{src['name']}({nick}) 权益 {eq:.0f}U | 未平 {len(pos)} 笔")
+            for p in pos:
+                tgt = target_notional(p["notional"], eq, src["weight"], CONFIG["capital"])
+                sign = -1 if p["side"] in ("SHORT", "SELL") else 1
+                print(f"   {p['symbol']:12} {p['side']:5} 名义 {p['notional']:>10,.0f}U "
+                      f"-> 目标 {sign*tgt:+8.1f}U | {p['opened']}")
+        except Exception as e:
+            print(f"{src['name']} 探查失败：{type(e).__name__} {e}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["dry", "live"], default="dry")
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--loop", action="store_true")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--probe", action="store_true")
     args = ap.parse_args()
 
     if args.selftest:
         sys.exit(selftest())
+    if args.probe:
+        probe(SOURCES)
+        return
 
     st = load_state()
     router = Router(args.mode)
