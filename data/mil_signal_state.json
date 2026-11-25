@@ -1,1 +1,1 @@
-{"open": [], "ts": 1795631347252}
+{"open": [{"symbol": "LITEUSDT", "side": "Long", "opened_ms": 1795530795544, "entry": 472.83272727, "max_qty": 55.0, "closed_qty": 10.0, "leverage": "24"}, {"symbol": "STXXUSDT", "side": "Long", "opened_ms": 1795532854628, "entry": 461.86571429, "max_qty": 35.0, "closed_qty": 10.0, "leverage": "20"}], "ts": 1795635049335}
